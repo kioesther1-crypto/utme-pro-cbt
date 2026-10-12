@@ -1,0 +1,94 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma/schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String   @id @default(cuid())
+  fullName         String
+  email            String   @unique
+  phone            String?
+  passwordHash     String
+  role             String   @default("student")
+  emailVerified    Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  exams            Exam[]
+}
+
+model Subject {
+  id          String     @id @default(cuid())
+  code        String     @unique
+  name        String
+  description String?
+  questions   Question[]
+  exams       Exam[]     @relation("ExamSubjects")
+}
+
+model Question {
+  id            String      @id @default(cuid())
+  subjectId     String
+  subject       Subject     @relation(fields: [subjectId], references: [id])
+  questionText  String
+  optionA       String
+  optionB       String
+  optionC       String
+  optionD       String
+  correctOption String
+  explanation   String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  examEntries   ExamQuestion[]
+}
+
+model Exam {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id])
+  title          String
+  subjectIds     String[]
+  subjects       Subject[]      @relation("ExamSubjects")
+  totalQuestions Int
+  durationMinutes Int
+  startedAt      DateTime?
+  submittedAt    DateTime?
+  autoSubmitted  Boolean        @default(false)
+  score          Float?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  answers        ExamAnswer[]
+  examQuestions  ExamQuestion[]
+  resultJson     Json?
+}
+
+model ExamQuestion {
+  id         String   @id @default(cuid())
+  examId     String
+  exam       Exam     @relation(fields: [examId], references: [id])
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id])
+  position   Int
+  createdAt  DateTime @default(now())
+
+  @@unique([examId, questionId])
+}
+
+model ExamAnswer {
+  id               String   @id @default(cuid())
+  examId           String
+  exam             Exam     @relation(fields: [examId], references: [id])
+  questionId       String
+  selectedOption   String?
+  markedForReview  Boolean  @default(false)
+  savedAt          DateTime @default(now())
+  isSynced         Boolean  @default(true)
+
+  @@unique([examId, questionId])
+}
