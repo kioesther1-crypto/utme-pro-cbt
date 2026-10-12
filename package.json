@@ -1,35 +1,70 @@
-{
-  "name": "utme-pro-cbt",
-  "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "prisma:generate": "prisma generate",
-    "prisma:migrate": "prisma migrate dev --name init",
-    "seed": "tsx prisma/seed.ts"
-  },
-  "dependencies": {
-    "@prisma/client": "^5.7.0",
-    "clsx": "^2.1.21",
-    "lucide-react": "^0.453.0",
-    "next": "14.2.15",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "zod": "^3.23.0"
-  },
-  "devDependencies": {
-    "@types/node": "^22.7.5",
-    "@types/react": "^18.3.3",
-    "@types/react-dom": "^18.3.0",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^8.57.0",
-    "eslint-config-next": "14.2.15",
-    "postcss": "^8.4.41",
-    "prisma": "^5.7.0",
-    "tailwindcss": "^3.4.10",
-    "tsx": "^4.19.2",
-    "typescript": "^5.6.2"
-  }
+"use client";
+
+import { useEffect, useState } from "react";
+
+export default function ExamSimulator() {
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string>>({});
+  const [markedForReview, setMarkedForReview] = useState<Record<string, boolean>>({});
+  const [remainingSeconds, setRemainingSeconds] = useState(42 * 60);
+
+  useEffect(() => {
+    fetch("/api/questions")
+      .then((res) => res.json())
+      .then((payload) => setQuestions(payload.questions ?? []));
+  }, []);
+
+  useEffect(() => {
+    const t = setInterval(() => {
+      setRemainingSeconds((sec) => (sec <= 1 ? 0 : sec - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const currentQuestion = questions[currentIndex];
+  if (!currentQuestion) return <main className="min-h-screen flex items-center justify-center">Loading exam…</main>;
+
+  return (
+    <main className="min-h-screen bg-slate-100 p-4">
+      <div className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white p-5 shadow-soft">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <div className="text-sm font-bold uppercase tracking-[0.2em] text-primary">JAMB UTME Mock Exam</div>
+            <h1 className="mt-2 text-2xl font-black">Question {currentIndex + 1} of {questions.length}</h1>
+          </div>
+          <div className="rounded-xl border border-danger/20 bg-dangerSoft px-3 py-2 text-sm font-bold text-danger">
+            {String(Math.floor(remainingSeconds / 60)).padStart(2, "0")}:{String(remainingSeconds % 60).padStart(2, "0")}
+          </div>
+        </div>
+
+        <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+          <h2 className="text-xl font-bold leading-8 text-slate-900">{currentQuestion.text}</h2>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          {currentQuestion.options.map((option: any) => {
+            const selected = selectedAnswers[currentQuestion.id] === option.label;
+            return (
+              <button
+                key={option.label}
+                type="button"
+                onClick={() => setSelectedAnswers((prev) => ({ ...prev, [currentQuestion.id]: option.label }))}
+                className={["flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition", selected ? "border-primary bg-primarySoft" : "border-slate-200 bg-white"].join(" ")}
+              >
+                <span className={["flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold", selected ? "bg-primary text-white" : "bg-slate-100 text-slate-700"].join(" ")}>{option.label}</span>
+                <span className="text-base text-slate-700">{option.text}</span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="mt-8 flex items-center justify-between gap-3">
+          <button type="button" disabled={currentIndex === 0} onClick={() => setCurrentIndex((i) => Math.max(0, i - 1))} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-700 disabled:opacity-50">Previous</button>
+          <button type="button" onClick={() => setMarkedForReview((prev) => ({ ...prev, [currentQuestion.id]: !prev[currentQuestion.id] }))} className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 font-semibold text-amber-700">{markedForReview[currentQuestion.id] ? "Reviewing" : "Mark for Review"}</button>
+          <button type="button" onClick={() => setCurrentIndex((i) => Math.min(questions.length - 1, i + 1))} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 font-semibold text-slate-700">Next</button>
+        </div>
+      </div>
+    </main>
+  );
 }
