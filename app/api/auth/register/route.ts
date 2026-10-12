@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUserByEmail, hashPassword, issueToken, sanitizeUser, users } from "@/lib/auth-store";
+import { getUserByEmail, hashPassword, issueToken, sanitizeUser, prisma } from "@/lib/auth-store";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const fullName = String(body?.fullName ?? "").trim();
-    const email = String(body?.email ?? "").trim();
+    const email = String(body?.email ?? "").trim().toLowerCase();
     const phone = String(body?.phone ?? "").trim();
     const password = String(body?.password ?? "");
 
@@ -13,28 +13,32 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Full name, email and password are required." }, { status: 400 });
     }
 
-    if (getUserByEmail(email)) {
+    const existing = await getUserByEmail(email);
+    if (existing) {
       return NextResponse.json({ error: "A user with this email already exists." }, { status: 409 });
     }
 
     const passwordHash = await hashPassword(password);
-    const newUser = {
-      id: crypto.randomUUID(),
-      fullName,
-      email,
-      phone: phone || undefined,
-      passwordHash,
-      role: "student" as const,
-      createdAt: new Date().toISOString(),
-    };
+    const newUser = await prisma.user.create({
+      data: {
+        fullName,
+        email,
+        phone: phone || null,
+        passwordHash,
+        role: "student",
+      },
+    });
 
-    users.push(newUser);
+    // issue a token on registration
+    const token = await issueToken({ sub: newUser.id, email: newUser.email, role: newUser.role, fullName: newUser.fullName });
 
     return NextResponse.json({
       message: "Registration successful.",
       user: sanitizeUser(newUser),
+      token,
     });
   } catch (error) {
+    console.error(error);
     return NextResponse.json({ error: "Unable to register user right now." }, { status: 500 });
   }
 }

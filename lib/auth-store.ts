@@ -1,29 +1,23 @@
-import { SignJWT, jwtVerify } from "jose";
+import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { SignJWT, jwtVerify } from "jose";
 
-export type UserRecord = {
-  id: string;
-  fullName: string;
-  email: string;
-  passwordHash: string;
-  phone?: string;
-  role: "student" | "admin";
-  createdAt: string;
-};
+const prisma = new PrismaClient();
 
-export const users: UserRecord[] = [];
+export async function getUserByEmail(email: string) {
+  return prisma.user.findUnique({ where: { email } });
+}
 
-export const getUserByEmail = (email: string) =>
-  users.find((user) => user.email.toLowerCase() === email.toLowerCase());
+export async function getUserById(id: string) {
+  return prisma.user.findUnique({ where: { id } });
+}
 
-export const getUserById = (id: string) => users.find((user) => user.id === id);
-
-export const hashPassword = (value: string) => bcrypt.hash(value, 12);
-export const verifyPassword = (value: string, hash: string) => bcrypt.compare(value, hash);
+export const hashPassword = async (value: string) => bcrypt.hash(value, 12);
+export const verifyPassword = async (value: string, hash: string) => bcrypt.compare(value, hash);
 
 const secret = new TextEncoder().encode(process.env.JWT_SECRET ?? "utme-pro-cbt-dev-secret");
 
-export async function issueToken(payload: Record<string, string>) {
+export async function issueToken(payload: Record<string, any>) {
   return new SignJWT(payload)
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
@@ -36,13 +30,17 @@ export async function verifyToken(token: string) {
   return payload;
 }
 
-export function sanitizeUser(user: UserRecord) {
+export function sanitizeUser(user: any) {
+  if (!user) return null;
   return {
     id: user.id,
     fullName: user.fullName,
     email: user.email,
     phone: user.phone ?? null,
     role: user.role,
-    createdAt: user.createdAt,
+    emailVerified: user.emailVerified ?? false,
+    createdAt: user.createdAt?.toISOString?.() ?? user.createdAt,
   };
 }
+
+export { prisma };
