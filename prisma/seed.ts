@@ -43,11 +43,9 @@ async function main() {
     },
   });
 
-  await prisma.question.upsert({
-    where: { id: "sample-eng-1" },
-    update: {},
-    create: {
-      id: "sample-eng-1",
+  const questions = [
+    {
+      id: "eng-question-1",
       subjectId: english.id,
       questionText: "Which of the following is the best explanation of the concept of demand in economics?",
       optionA: "The quantity of goods that producers are willing to sell at a given price",
@@ -57,13 +55,8 @@ async function main() {
       correctOption: "B",
       explanation: "Demand refers to the consumer's willingness and ability to purchase at various prices.",
     },
-  });
-
-  await prisma.question.upsert({
-    where: { id: "sample-mat-1" },
-    update: {},
-    create: {
-      id: "sample-mat-1",
+    {
+      id: "math-question-1",
       subjectId: maths.id,
       questionText: "Solve: 2x + 5 = 17",
       optionA: "x = 4",
@@ -73,13 +66,8 @@ async function main() {
       correctOption: "C",
       explanation: "Subtract 5 from both sides to get 2x = 12, then divide by 2.",
     },
-  });
-
-  await prisma.question.upsert({
-    where: { id: "sample-phy-1" },
-    update: {},
-    create: {
-      id: "sample-phy-1",
+    {
+      id: "physics-question-1",
       subjectId: physics.id,
       questionText: "What is the SI unit of force?",
       optionA: "Joule",
@@ -89,13 +77,8 @@ async function main() {
       correctOption: "C",
       explanation: "Force is measured in Newtons in the SI system.",
     },
-  });
-
-  await prisma.question.upsert({
-    where: { id: "sample-che-1" },
-    update: {},
-    create: {
-      id: "sample-che-1",
+    {
+      id: "chem-question-1",
       subjectId: chemistry.id,
       questionText: "The atomic number of an element represents:",
       optionA: "Number of neutrons",
@@ -105,12 +88,20 @@ async function main() {
       correctOption: "B",
       explanation: "Atomic number equals the number of protons in the nucleus.",
     },
-  });
+  ];
+
+  for (const question of questions) {
+    await prisma.question.upsert({
+      where: { id: question.id },
+      update: {},
+      create: question,
+    });
+  }
 }
 
 main()
-  .catch((e) => {
-    console.error(e);
+  .catch((error) => {
+    console.error(error);
     process.exit(1);
   })
   .finally(async () => {
